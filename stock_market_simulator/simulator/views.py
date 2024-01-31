@@ -63,7 +63,7 @@ def userLoginView(request):
                 "data": {}
             }
             return JsonResponse(res)
-
+        
 def userOrdersView(request):
     data = []
     res = {
@@ -73,13 +73,19 @@ def userOrdersView(request):
     }
     userId = 1
     try:
-        currentUser = CustomUser.objects.get(id=userId)
-        orders = StockOrder.objects.filter(user = currentUser)
+        # Fetch the user and related orders in one query
+        orders = StockOrder.objects.filter(user_id=userId).select_related('stock_id')
         for order in orders:
-            data.append({'id': order.id,'stock':order.stock_id.stockname, 'amount': order.quantity, 'price': order.price, 'type': order.order_type})
+            data.append({
+                'id': order.id,
+                'stock': order.stock_id.stockname,
+                'amount': order.quantity,
+                'price': order.price,
+                'type': order.order_type
+            })
         res = {
             'status':'success',
-            'message': 'succeced',
+            'message': 'succeeded',
             'data': data
         }
     except Exception as e:
@@ -94,18 +100,27 @@ def userHistoryView(request):
         'data': data
     }
     try:
-        transations = Transaction.objects.all()
-        for tr in transations:
-            data.append({'id': tr.id, 'from': tr.buyer.username, 'to': tr.seller.username, 'stock': tr.stockId.stockname, 'amount': tr.quantity, 'price': tr.price, 'date': tr.timestamp })
+        # Use select_related for ForeignKey relations
+        transactions = Transaction.objects.all().select_related('buyer', 'seller', 'stockId')
+        for tr in transactions:
+            data.append({
+                'id': tr.id,
+                'from': tr.buyer.username,
+                'to': tr.seller.username,
+                'stock': tr.stockId.stockname,
+                'amount': tr.quantity,
+                'price': tr.price,
+                'date': tr.timestamp
+            })
         res = {
             'status':'success',
-            'message': 'succeced',
+            'message': 'succeeded',
             'data': data
         }
     except Exception as e:
         logging.error(e)
-
     return JsonResponse(res, safe=False)
+
 
 def getSellsView(request):
     data = []
